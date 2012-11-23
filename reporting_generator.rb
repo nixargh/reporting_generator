@@ -1,10 +1,15 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 # (*w)
-version = 0.1
-
+version = "0.1"
+##### SETTINGS #####################################################
 content_dir = './content'
 index_template = './sys/index.html.template'
-
+##### IMPORTS ######################################################
+##### FUNCTIONS ####################################################
+def cd_to_program_dir!
+	Dir.chdir(File.dirname(__FILE__))
+end
+##### CLASSES ######################################################
 class Transport
 	def find_new
 	end
@@ -40,6 +45,7 @@ class Content
 		url_list
 	end
 end
-
+##### BEGIN ########################################################
+cd_to_program_dir!
 content = Content.new(content_dir, index_template)
 puts content.build_index!
