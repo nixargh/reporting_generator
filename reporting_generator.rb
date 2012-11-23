@@ -21,8 +21,11 @@ class Transport
 	def find_new
 		if File.exist?(`which smbclient`.chomp)
 			files_list = `smbclient -W #{@domain} -U #{@user} -c 'dir' #{@smb_share} #{@password}`
-			files_list.split('\n').each{|file|
-				puts file
+			(files_list.split("\n")[0..files_list.length-4]).each{|file|
+				file = file.split(' ')
+				if file[0] != '.' && file[0] != '..'
+					puts "file #{file[0]} modified at #{file.last}"#Time.utc((file.last).to_i)}"
+				end
 			}
 		else
 			raise "Can't access smb share. Install \"smbclient\" first."
