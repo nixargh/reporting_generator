@@ -16,12 +16,12 @@ class Transport
 		@user = 'reporting_bel-web2'
 		@password = 'd7FG34r8ds4fajsdk9'
 		@domain = 'mec.int'
-		@smb_share = '\\bel-vmm01.mec.int\reports'
+		@smb_share = "\'//bel-vmm01.mec.int/reports\'"
 	end
 	def find_new
 		if File.exist?(`which smbclient`.chomp)
-			files_list = "smbclient -W #{@domain} -U #{@user} -c 'dir' #{@smb_share} #{@password}"
-			files_list.split.each{|file|
+			files_list = `smbclient -W #{@domain} -U #{@user} -c 'dir' #{@smb_share} #{@password}`
+			files_list.split('\n').each{|file|
 				puts file
 			}
 		else
