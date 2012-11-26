@@ -1,57 +1,87 @@
 #!/usr/bin/env ruby
 # script to get html files from samba share and create html page with list of them
 # (*w)
-$version = "0.2"
+$version = "1.0"
 ##### SETTINGS #####################################################
+site_dir = '/var/www/reporting'
 content_dir = './content'
-index_template = './sys/index.html.template'
+$content_owner = 33
+$content_group = 33
 ##### REQUIRE ######################################################
 ##### FUNCTIONS ####################################################
 def cd_to_program_dir!
-	Dir.chdir(File.dirname(__FILE__))
+	site_dir ? Dir.chdir(site_dir)  : Dir.chdir(File.dirname(__FILE__))
 end
 ##### CLASSES ######################################################
 class Transport
-	def initialize
+	def initialize(content_dir)
+		@content_dir = content_dir ? content_dir : raise('Content directory not defined')
 		@user = 'reporting_bel-web2'
 		@password = 'd7FG34r8ds4fajsdk9'
 		@domain = 'mec.int'
 		@smb_share = "\'//bel-vmm01.mec.int/reports\'"
+		@content_owner = $content_owner
+		@content_group = $content_group
 	end
-	def find_new
+	def get_new_files!
+		puts "Finding new files at \"#{@smb_share}\"..."
 		if File.exist?(`which smbclient`.chomp)
-			files_list = `smbclient -W #{@domain} -U #{@user} -c 'dir' #{@smb_share} #{@password}`
-			(files_list.split("\n")[0..files_list.length-4]).each{|file|
+			files_list = `smbclient -W #{@domain} -U #{@user} -c 'dir' #{@smb_share} #{@password} 2>/dev/null`
+			files_list_array = files_list.split("\n")
+			files_list_array[0..files_list_array.length-3].each{|file|
 				file = file.split(' ')
-				if file[0] != '.' && file[0] != '..'
-					puts "file #{file[0]} modified at #{file.last}"#Time.utc((file.last).to_i)}"
+				if (file[0] != '.' && file[0] != '..') && (file[0].index('.html') || file[0].index('.css') )
+					time = file[-2].split(':')
+					remote_time = Time.local(file.last.to_i, file[-4].to_s, file[-3].to_i, time[0].to_i, time[1].to_i, time[2].to_i)
+					#puts "file #{file[0]} modified at #{Time.local(file.last.to_i, file[-4].to_s, file[-3].to_i, time[0].to_i, time[1].to_i, time[2].to_i)}"
+					local_file = "#{@content_dir}/#{file[0]}"
+					if File.exist?(local_file)
+						if (remote_time <=> File.ctime(local_file)) > 0
+							puts "\tRemote file \"#{file[0]}\" newer than local."
+							smb_copy_file!(file[0], local_file)
+						else
+							puts "\tLocal file \"#{file[0]}\" is actual."
+						end
+					else
+						puts "\tLocal file #{file[0]} doesn't exist."
+						smb_copy_file!(file[0], local_file)
+					end
 				end
 			}
 		else
 			raise "Can't access smb share. Install \"smbclient\" first."
 		end
 	end
-	def copy
+
+	def smb_copy_file!(from_d, to_d)
+		puts "\t\tCopy remote file \"#{from_d}\" to local \"#{to_d}\""	
+		`smbclient -W #{@domain} -U #{@user} -c 'get #{from_d} #{to_d}' #{@smb_share} #{@password} 2>/dev/null`
+		File.chown(@content_owner, @content_group, to_d)
 	end
 end
 
 class Content
-	def initialize(content_dir, index_template)
+	def initialize(content_dir)
 		@content_dir = content_dir ? content_dir : raise('Content directory not defined')
-		@index_template = index_template ? index_template : raise('index.html template file not defined')
+		@index_template = './sys/index.html.template'
+		@index_file = './index.html'
+		@content_owner = $content_owner
+		@content_group = $content_group
 	end
 	def build_index!
+		puts "Building \"index.html\" file.."
 		htmls = get_htmls_list(@content_dir)
 		url_list = create_links(htmls)
 		index_content = IO.read(@index_template).sub!('%$index_list$%', url_list)
-		File.open('./index.html','w'){|file|
+		File.open(@index_file,'w'){|file|
 			file.puts(index_content)
 		}
+		File.chown(@content_owner, @content_group, @index_file)
 	end
 	def get_htmls_list(dir)
 		htmls = Array.new
 		Dir.foreach(@content_dir){|entry|
-			htmls.push("#{@content_dir}/#{entry}") if (entry.index('.html') || entry.index('.css'))
+			htmls.push("#{@content_dir}/#{entry}") if entry.index('.html')
 		}
 		htmls
 	end
@@ -65,7 +95,8 @@ class Content
 end
 ##### BEGIN ########################################################
 cd_to_program_dir!
-#content = Content.new(content_dir, index_template)
-#content.build_index!
-transport = Transport.new
-transport.find_new
+
+transport = Transport.new(content_dir)
+transport.get_new_files!
+content = Content.new(content_dir)
+content.build_index!
