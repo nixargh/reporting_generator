@@ -8,6 +8,7 @@ $site_dir = '/var/www/reporting'
 content_dir = './content'
 $content_owner = 33
 $content_group = 33
+@conf_file = './etc/repgen.conf'
 ##### REQUIRE ######################################################
 ##### FUNCTIONS ####################################################
 def get_program_dir!
@@ -16,6 +17,15 @@ end
 
 def cd_to_site_dir!
 	$site_dir ? Dir.chdir($site_dir)  : Dir.chdir($prog_dir)
+end
+
+def read_conf!
+	params = Hash.new
+	IO.read(@conf_file){|line|
+		sline = line.split('=')
+		params[sline[0]] = sline[1]
+	}
+	params
 end
 ##### CLASSES ######################################################
 class Transport
@@ -69,10 +79,11 @@ class Content
 	def initialize(content_dir)
 		@content_dir = content_dir ? content_dir : raise('Content directory not defined')
 		@index_template = "#{$prog_dir}/sys/index.html.template"
+		@index_css = "#{$prog_dir}/sys/index.css"
 		@index_file = './index.html'
 		@content_owner = $content_owner
 		@content_group = $content_group
-		@title = "Список отчётов"
+		@title = "List of Documents"
 	end
 	def build_index!
 		puts "Building \"index.html\" file.."
@@ -82,7 +93,8 @@ class Content
 		File.open(@index_file,'w'){|file|
 			file.puts(index_content)
 		}
-		File.chown(@content_owner, @content_group, @index_file)
+		`cp -u #{@index_css} #{$site_dir}`
+		File.chown(@content_owner, @content_group, @index_file, "#{$site_dir}/#{File.basename(@index_css)}")
 	end
 private
 	def get_htmls_list(dir)
@@ -95,10 +107,10 @@ private
 	def create_links(files)
 		url_list = String.new
 		files.each{|file|
-			url_list = "#{url_list}<li><a href=\"#{file}\" target=\"_blank\">#{File.basename(file).gsub!('.html', '')}</a></li>"
+			url_list = "#{url_list}<tr><td><a font-style=bold href=\"#{file}\" target=\"_blank\">#{File.basename(file).gsub!('.html', '')}</a></td><td></td></th>"
 
 		}
-		url_list = "<ul>#{url_list}</ul>"
+		url_list
 	end
 end
 ##### BEGIN ########################################################
