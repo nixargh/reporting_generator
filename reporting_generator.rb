@@ -120,8 +120,6 @@ get_program_dir!
 read_conf!
 cd_to_site_dir!
 
-puts $params
-
 transport = Transport.new
 transport.get_new_files!
 content = Content.new
