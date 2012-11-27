@@ -2,13 +2,9 @@
 # encoding: utf-8
 # script to get html files from samba share and create html page with list of them
 # (*w)
-$version = "1.1"
+$version = "1.2"
 ##### SETTINGS #####################################################
-$site_dir = '/var/www/reporting'
-content_dir = './content'
-$content_owner = 33
-$content_group = 33
-@conf_file = './etc/repgen.conf'
+@conf_file = 'etc/regen.conf'
 ##### REQUIRE ######################################################
 ##### FUNCTIONS ####################################################
 def get_program_dir!
@@ -16,27 +12,33 @@ def get_program_dir!
 end
 
 def cd_to_site_dir!
-	$site_dir ? Dir.chdir($site_dir)  : Dir.chdir($prog_dir)
+	$params['site_dir'] ? Dir.chdir($params['site_dir'])  : Dir.chdir($prog_dir)
 end
 
 def read_conf!
-	params = Hash.new
-	IO.read(@conf_file){|line|
-		sline = line.split('=')
-		params[sline[0]] = sline[1]
-	}
-	params
+	conf_file = $prog_dir + '/' + @conf_file
+	if File.exist?(conf_file)
+		params = Hash.new
+		IO.read(conf_file).each_line{|line|
+			line.chomp!
+			sline = line.split('=')
+			params[sline[0]] = sline[1]
+		}
+		$params = params
+	else
+		raise "Configuration file \"#{conf_file}\" not found!"
+	end
 end
 ##### CLASSES ######################################################
 class Transport
-	def initialize(content_dir)
-		@content_dir = content_dir ? content_dir : raise('Content directory not defined')
-		@user = 'reporting_bel-web2'
-		@password = 'd7FG34r8ds4fajsdk9'
-		@domain = 'mec.int'
-		@smb_share = "\'//bel-vmm01.mec.int/reports\'"
-		@content_owner = $content_owner
-		@content_group = $content_group
+	def initialize
+		@content_dir = $params['content_dir'] ? $params['content_dir'] : raise('Content directory not defined')
+		@user = $params['user']
+		@password = $params['password']
+		@domain = $params['domain']
+		@smb_share = $params['smb_share']
+		@content_owner = $params['content_owner'].to_i
+		@content_group = $params['conten_group'].to_i
 	end
 	def get_new_files!
 		puts "Finding new files at \"#{@smb_share}\"..."
@@ -76,14 +78,14 @@ private
 end
 
 class Content
-	def initialize(content_dir)
-		@content_dir = content_dir ? content_dir : raise('Content directory not defined')
-		@index_template = "#{$prog_dir}/sys/index.html.template"
-		@index_css = "#{$prog_dir}/sys/index.css"
+	def initialize
+		@content_dir = $params['content_dir'] ? $params['content_dir'] : raise('Content directory not defined')
+		@index_template = "#{$prog_dir}/#{$params['index_template']}"
+		@index_css = "#{$prog_dir}/#{$params['index_css']}"
 		@index_file = './index.html'
-		@content_owner = $content_owner
-		@content_group = $content_group
-		@title = "List of Documents"
+		@content_owner = $params['content_owner'].to_i
+                @content_group = $params['conten_group'].to_i
+		@title = $params['title']
 	end
 	def build_index!
 		puts "Building \"index.html\" file.."
@@ -93,8 +95,8 @@ class Content
 		File.open(@index_file,'w'){|file|
 			file.puts(index_content)
 		}
-		`cp -u #{@index_css} #{$site_dir}`
-		File.chown(@content_owner, @content_group, @index_file, "#{$site_dir}/#{File.basename(@index_css)}")
+		`cp -u #{@index_css} #{$params['site_dir']}`
+		File.chown(@content_owner, @content_group, @index_file, "#{$params['site_dir']}/#{File.basename(@index_css)}")
 	end
 private
 	def get_htmls_list(dir)
@@ -115,9 +117,12 @@ private
 end
 ##### BEGIN ########################################################
 get_program_dir!
+read_conf!
 cd_to_site_dir!
 
-transport = Transport.new(content_dir)
+puts $params
+
+transport = Transport.new
 transport.get_new_files!
-content = Content.new(content_dir)
+content = Content.new
 content.build_index!

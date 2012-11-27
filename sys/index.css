@@ -1,0 +1,30 @@
+body {
+	background-color: white;
+	font-family:Calibri;
+	font-size:15pt;
+	text-align:left;
+}
+
+h1 {
+	font-family:Calibri;
+	font-size:20pt;
+	text-align:center;
+}
+
+table {
+	table-layout: fixed;
+	width:100%;
+}
+th {
+	background-color:black;
+	color:white;
+}
+td {
+	background-color:#C0C0C0;
+	color:black;
+}
+
+a {
+	font-family:Calibri;
+	font-weight:bold;
+}
