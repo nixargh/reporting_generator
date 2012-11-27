@@ -2,7 +2,7 @@
 # encoding: utf-8
 # script to get html files from samba share and create html page with list of them
 # (*w)
-$version = "1.3"
+$version = "1.3.0"
 ##### SETTINGS #####################################################
 @conf_file = 'etc/regen.conf'
 ##### REQUIRE ######################################################
@@ -20,15 +20,12 @@ def read_conf!
 	if File.exist?(conf_file)
 		params = Hash.new
 		IO.read(conf_file).each_line{|line|
-			puts line
 			comment_index = line.index('#')
 			line = line[0..comment_index-1] if comment_index
 			line.chomp!
-			puts line
 			sline = line.split('=')
 			params[sline[0]] = sline[1].strip
 		}
-	puts params
 		$params = params
 	else
 		raise "Configuration file \"#{conf_file}\" not found!"
