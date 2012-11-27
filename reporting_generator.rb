@@ -2,7 +2,7 @@
 # encoding: utf-8
 # script to get html files from samba share and create html page with list of them
 # (*w)
-$version = "1.2"
+$version = "1.3"
 ##### SETTINGS #####################################################
 @conf_file = 'etc/regen.conf'
 ##### REQUIRE ######################################################
@@ -20,10 +20,15 @@ def read_conf!
 	if File.exist?(conf_file)
 		params = Hash.new
 		IO.read(conf_file).each_line{|line|
+			puts line
+			comment_index = line.index('#')
+			line = line[0..comment_index-1] if comment_index
 			line.chomp!
+			puts line
 			sline = line.split('=')
-			params[sline[0]] = sline[1]
+			params[sline[0]] = sline[1].strip
 		}
+	puts params
 		$params = params
 	else
 		raise "Configuration file \"#{conf_file}\" not found!"
@@ -109,10 +114,20 @@ private
 	def create_links(files)
 		url_list = String.new
 		files.each{|file|
-			url_list = "#{url_list}<tr><td><a font-style=bold href=\"#{file}\" target=\"_blank\">#{File.basename(file).gsub!('.html', '')}</a></td><td></td></th>"
+			url_list = "#{url_list}<tr><td><a font-style=bold href=\"#{file}\" target=\"_blank\">#{File.basename(file).gsub!('.html', '')}</a></td><td>#{find_description(file)}</td></th>"
 
 		}
 		url_list
+	end
+	def find_description(file)
+		description = nil
+		IO.read(file).each_line{|line|
+			if line.index("<meta name=#{$params['description_meta_tag']}")
+				description = line.split("content=")
+				description = description[1].delete!('">')
+			end
+		}
+		description
 	end
 end
 ##### BEGIN ########################################################

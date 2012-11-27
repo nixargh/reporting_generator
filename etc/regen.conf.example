@@ -1,0 +1,13 @@
+site_dir=#local folder used by webserver as site root
+content_owner=#uid of user that running webserver
+content_group=#gid of group that running webserver
+content_dir=./content #subdirectory of web site where to store document's html files
+user=#user login to access smb share
+password=#user password to access smb share
+domain=#user domain to access smb share (or server name for local user)
+smb_share=#smb share address
+index_file=./index.html
+title=#site title
+index_template=sys/index.html.template #template for index.html
+index_css=sys/index.css #css file for index.html
+description_meta_tag="description" #meta tag with description to document, must be fount inside document.html
